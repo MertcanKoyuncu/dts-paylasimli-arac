@@ -103,44 +103,98 @@ const HomeScreen = () => {
       setIsSuggestingFor('destination');
     }
     
-    // Debounce işlemi - yazma bittikten 500ms sonra işlemi yap
+    // Debounce işlemi - yazma bittikten 300ms sonra işlemi yap
     clearTimeout(debounceTimer.current);
     
     if (text.length > 2) {
-      debounceTimer.current = setTimeout(() => {
-        // Tamamen yerel test verileri kullan - Genişletilmiş liste
-        const suggestions = [
-          { place_id: 'test1', description: 'Ankara, Türkiye' },
-          { place_id: 'test2', description: 'İstanbul, Türkiye' },
-          { place_id: 'test3', description: 'İzmir, Türkiye' },
-          { place_id: 'test4', description: 'Antalya, Türkiye' },
-          { place_id: 'test5', description: 'Bursa, Türkiye' },
-          // Ankara ilçeleri
-          { place_id: 'test1_1', description: 'Çankaya, Ankara, Türkiye' },
-          { place_id: 'test1_2', description: 'Keçiören, Ankara, Türkiye' },
-          { place_id: 'test1_3', description: 'Mamak, Ankara, Türkiye' },
-          // İstanbul ilçeleri
-          { place_id: 'test2_1', description: 'Kadıköy, İstanbul, Türkiye' },
-          { place_id: 'test2_2', description: 'Beşiktaş, İstanbul, Türkiye' },
-          { place_id: 'test2_3', description: 'Üsküdar, İstanbul, Türkiye' },
-          // İzmir ilçeleri
-          { place_id: 'test3_1', description: 'Konak, İzmir, Türkiye' },
-          { place_id: 'test3_2', description: 'Karşıyaka, İzmir, Türkiye' },
-          // Antalya ilçeleri
-          { place_id: 'test4_1', description: 'Konyaaltı, Antalya, Türkiye' },
-          { place_id: 'test4_2', description: 'Muratpaşa, Antalya, Türkiye' }
-        ].filter(item => 
-          // Daha esnek arama yapma
-          item.description.toLowerCase().includes(text.toLowerCase())
-        );
-        
-        console.log("Aranan metin:", text);
-        console.log("Bulunan öneriler:", suggestions.length);
-        setSuggestions(suggestions);
+      debounceTimer.current = setTimeout(async () => {
+        try {
+          console.log("Google Places API araması yapılıyor:", text);
+          
+          // Google Places Autocomplete API çağrısı
+          const response = await fetch(
+            `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(text)}&types=geocode&language=tr&key=${GOOGLE_API_KEY}`
+          );
+          
+          const data = await response.json();
+          console.log("API yanıtı:", data);
+          
+          if (data.status === 'OK' && data.predictions && data.predictions.length > 0) {
+            // API yanıtını suggestions formatına dönüştür
+            const apiSuggestions = data.predictions.map(prediction => ({
+              place_id: prediction.place_id,
+              description: prediction.description
+            }));
+            
+            console.log("API'den gelen öneriler:", apiSuggestions.length);
+            setSuggestions(apiSuggestions);
+          } else {
+            console.log("API yanıtı boş veya hatalı, yerel verilere dönülüyor");
+            // API yanıtı yoksa veya hatalıysa yerel verileri kullan
+            performLocalSearch(text);
+          }
+        } catch (error) {
+          console.error("API hatası:", error);
+          // Hata durumunda yerel arama yap
+          performLocalSearch(text);
+        }
       }, 300);
     } else {
       setSuggestions([]);
     }
+  };
+  
+  // Yerel arama yardımcı fonksiyonu
+  const performLocalSearch = (searchText) => {
+    // Genişletilmiş yerel veri seti
+    const allLocations = [
+      { place_id: 'test1', description: 'Ankara, Türkiye', keywords: ['ankara'] },
+      { place_id: 'test2', description: 'İstanbul, Türkiye', keywords: ['istanbul'] },
+      { place_id: 'test3', description: 'İzmir, Türkiye', keywords: ['izmir'] },
+      { place_id: 'test4', description: 'Antalya, Türkiye', keywords: ['antalya'] },
+      { place_id: 'test5', description: 'Bursa, Türkiye', keywords: ['bursa'] },
+      // Ankara ilçeleri
+      { place_id: 'test1_1', description: 'Çankaya, Ankara, Türkiye', keywords: ['cankaya', 'çankaya', 'ankara'] },
+      { place_id: 'test1_2', description: 'Keçiören, Ankara, Türkiye', keywords: ['kecioren', 'keçiören', 'ankara'] },
+      { place_id: 'test1_3', description: 'Mamak, Ankara, Türkiye', keywords: ['mamak', 'ankara'] },
+      // İstanbul ilçeleri
+      { place_id: 'test2_1', description: 'Kadıköy, İstanbul, Türkiye', keywords: ['kadikoy', 'kadıköy', 'istanbul'] },
+      { place_id: 'test2_2', description: 'Beşiktaş, İstanbul, Türkiye', keywords: ['besiktas', 'beşiktaş', 'istanbul'] },
+      { place_id: 'test2_3', description: 'Üsküdar, İstanbul, Türkiye', keywords: ['uskudar', 'üsküdar', 'istanbul'] },
+      // Daha fazla veri
+      { place_id: 'test1_4', description: 'Kızılay, Ankara, Türkiye', keywords: ['kizilay', 'kızılay', 'ankara'] },
+      { place_id: 'test1_5', description: 'Bahçelievler, Ankara, Türkiye', keywords: ['bahcelievler', 'bahçelievler', 'ankara'] },
+      { place_id: 'test2_4', description: 'Beyoğlu, İstanbul, Türkiye', keywords: ['beyoglu', 'beyoğlu', 'istanbul'] },
+      { place_id: 'test2_5', description: 'Şişli, İstanbul, Türkiye', keywords: ['sisli', 'şişli', 'istanbul'] },
+      { place_id: 'test2_6', description: 'Fatih, İstanbul, Türkiye', keywords: ['fatih', 'istanbul'] },
+      { place_id: 'test3_3', description: 'Bornova, İzmir, Türkiye', keywords: ['bornova', 'izmir'] },
+      { place_id: 'test3_4', description: 'Çeşme, İzmir, Türkiye', keywords: ['cesme', 'çeşme', 'izmir'] },
+      { place_id: 'test4_3', description: 'Alanya, Antalya, Türkiye', keywords: ['alanya', 'antalya'] },
+      { place_id: 'test4_4', description: 'Side, Antalya, Türkiye', keywords: ['side', 'antalya'] },
+      { place_id: 'test5_1', description: 'Mudanya, Bursa, Türkiye', keywords: ['mudanya', 'bursa'] },
+      // Ekstra önemli yerler
+      { place_id: 'landmark1', description: 'Anıtkabir, Ankara, Türkiye', keywords: ['anitkabir', 'anıtkabir', 'ankara'] },
+      { place_id: 'landmark2', description: 'Topkapı Sarayı, İstanbul, Türkiye', keywords: ['topkapi', 'topkapı', 'saray', 'istanbul'] },
+      { place_id: 'landmark3', description: 'Ayasofya, İstanbul, Türkiye', keywords: ['ayasofya', 'istanbul'] },
+      { place_id: 'landmark4', description: 'Saat Kulesi, İzmir, Türkiye', keywords: ['saat', 'kule', 'izmir'] }
+    ];
+    
+    const normalizedSearchText = searchText.toLowerCase().replace(/ı/g, 'i').replace(/ö/g, 'o').replace(/ü/g, 'u').replace(/ş/g, 's').replace(/ç/g, 'c').replace(/ğ/g, 'g');
+    
+    const filteredResults = allLocations.filter(location => {
+      // Başlık içinde arama
+      if (location.description.toLowerCase().includes(searchText.toLowerCase())) {
+        return true;
+      }
+      
+      // Anahtar kelimelerde arama
+      return location.keywords.some(keyword => 
+        keyword.includes(normalizedSearchText) || normalizedSearchText.includes(keyword)
+      );
+    });
+    
+    console.log("Yerel arama sonuçları:", filteredResults.length);
+    setSuggestions(filteredResults);
   };
   
   // Seçilen öneriyi işle
@@ -148,141 +202,116 @@ const HomeScreen = () => {
     try {
       console.log("Seçilen yer ID:", placeId);
       
-      // Test verileriyle çalış
-      let lat, lng, address;
-      
-      // Şehir merkezi konumları
-      if (placeId === 'test1') {
-        // Ankara
-        lat = 39.9334;
-        lng = 32.8597;
-        address = 'Ankara, Türkiye';
-      } else if (placeId === 'test2') {
-        // İstanbul
-        lat = 41.0082;
-        lng = 28.9784;
-        address = 'İstanbul, Türkiye';
-      } else if (placeId === 'test3') {
-        // İzmir
-        lat = 38.4237;
-        lng = 27.1428;
-        address = 'İzmir, Türkiye';
-      } else if (placeId === 'test4') {
-        // Antalya
-        lat = 36.8969;
-        lng = 30.7133;
-        address = 'Antalya, Türkiye';
-      } else if (placeId === 'test5') {
-        // Bursa
-        lat = 40.1885;
-        lng = 29.0610;
-        address = 'Bursa, Türkiye';
-      } 
-      // Ankara ilçeleri
-      else if (placeId === 'test1_1') {
-        // Çankaya
-        lat = 39.9027;
-        lng = 32.8560;
-        address = 'Çankaya, Ankara, Türkiye';
-      } else if (placeId === 'test1_2') {
-        // Keçiören
-        lat = 39.9750;
-        lng = 32.8639;
-        address = 'Keçiören, Ankara, Türkiye';
-      } else if (placeId === 'test1_3') {
-        // Mamak
-        lat = 39.9394;
-        lng = 32.9223;
-        address = 'Mamak, Ankara, Türkiye';
-      }
-      // İstanbul ilçeleri
-      else if (placeId === 'test2_1') {
-        // Kadıköy
-        lat = 40.9830;
-        lng = 29.0291;
-        address = 'Kadıköy, İstanbul, Türkiye';
-      } else if (placeId === 'test2_2') {
-        // Beşiktaş
-        lat = 41.0422;
-        lng = 29.0093;
-        address = 'Beşiktaş, İstanbul, Türkiye';
-      } else if (placeId === 'test2_3') {
-        // Üsküdar
-        lat = 41.0284;
-        lng = 29.0186;
-        address = 'Üsküdar, İstanbul, Türkiye';
-      }
-      // İzmir ilçeleri
-      else if (placeId === 'test3_1') {
-        // Konak
-        lat = 38.4192;
-        lng = 27.1286;
-        address = 'Konak, İzmir, Türkiye';
-      } else if (placeId === 'test3_2') {
-        // Karşıyaka
-        lat = 38.4595;
-        lng = 27.1126;
-        address = 'Karşıyaka, İzmir, Türkiye';
-      }
-      // Antalya ilçeleri
-      else if (placeId === 'test4_1') {
-        // Konyaaltı
-        lat = 36.8841;
-        lng = 30.6394;
-        address = 'Konyaaltı, Antalya, Türkiye';
-      } else if (placeId === 'test4_2') {
-        // Muratpaşa
-        lat = 36.8876;
-        lng = 30.7054;
-        address = 'Muratpaşa, Antalya, Türkiye';
+      // Test ID'leri ile başlayan yerel veri işlemi
+      if (placeId.startsWith('test') || placeId.startsWith('landmark')) {
+        const locationData = locationMap[placeId];
+        
+        if (locationData) {
+          const { lat, lng, address } = locationData;
+          const coords = { latitude: lat, longitude: lng };
+          updateLocationData(coords, address);
+        } else {
+          console.error("Bilinmeyen yerel yer ID:", placeId);
+          alert("Konum bulunamadı. Lütfen geçerli bir konum seçin.");
+        }
       } else {
-        // Varsayılan - İstanbul
-        lat = 41.0082;
-        lng = 28.9784;
-        address = 'İstanbul, Türkiye';
-      }
-      
-      const coords = { latitude: lat, longitude: lng };
-      console.log("Seçilen konum:", address, coords);
-      
-      if (isSuggestingFor === 'origin') {
-        setCurrentLocation(address);
-        setOriginCoords(coords);
-        console.log("Origin güncellendi:", address);
-      } else {
-        setDestination(address);
-        setDestinationCoords(coords);
-        console.log("Destination güncellendi:", address);
-      }
-      
-      // Haritayı bu konuma odakla
-      setRegion({
-        latitude: lat,
-        longitude: lng,
-        latitudeDelta: 0.01,
-        longitudeDelta: 0.01,
-      });
-      
-      setSuggestions([]);
-      setIsSuggestingFor(null);
-      
-      // Her iki konum da seçilmişse mesafe ve süreyi hesapla
-      if (originCoords && destinationCoords) {
-        console.log("İki konum da hazır, hesaplama yapılıyor");
-        calculateDistanceAndDuration();
-      } else if (isSuggestingFor === 'origin' && destinationCoords) {
-        console.log("Origin güncellendi ve destination zaten var, hesaplama yapılıyor");
-        // Origin seçildikten sonra, destination koordinatları varsa hesapla
-        setTimeout(() => calculateDistanceAndDuration(), 300);
-      } else if (isSuggestingFor === 'destination' && originCoords) {
-        console.log("Destination güncellendi ve origin zaten var, hesaplama yapılıyor");
-        // Destination seçildikten sonra, origin koordinatları varsa hesapla
-        setTimeout(() => calculateDistanceAndDuration(), 300);
-      } else {
-        console.log("İki konum da hazır değil, hesaplama yapılmıyor");
+        // Google Places API'den yer detaylarını al
+        console.log("Google Places API'den yer detayları alınıyor");
+        
+        const response = await fetch(
+          `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry,formatted_address&key=${GOOGLE_API_KEY}`
+        );
+        
+        const data = await response.json();
+        console.log("Yer detayları:", data);
+        
+        if (data.status === 'OK' && data.result) {
+          const location = data.result.geometry.location;
+          const address = data.result.formatted_address;
+          
+          const coords = { 
+            latitude: location.lat, 
+            longitude: location.lng 
+          };
+          
+          updateLocationData(coords, address);
+        } else {
+          console.error("Yer detayları alınamadı:", data.status);
+          alert("Google Places API'dan konum bilgileri alınamadı. Lütfen tekrar deneyin.");
+        }
       }
     } catch (error) {
       console.error('Yer detayı hatası:', error);
+      alert("Bir hata oluştu. Lütfen tekrar deneyin.");
+    }
+  };
+  
+  // Konum verilerini güncelle ve gerekli işlemleri yap
+  const updateLocationData = (coords, address) => {
+    console.log("Konum güncelleniyor:", address, coords);
+    
+    // Güncellenecek durumu ve yeni koordinatları burada önce belirleyip sonra state'leri güncelleyelim
+    let newOriginCoords = originCoords;
+    let newDestinationCoords = destinationCoords;
+    
+    if (isSuggestingFor === 'origin') {
+      setCurrentLocation(address);
+      setOriginCoords(coords);
+      newOriginCoords = coords;
+      console.log("Origin güncellendi:", address);
+    } else {
+      setDestination(address);
+      setDestinationCoords(coords);
+      newDestinationCoords = coords;
+      console.log("Destination güncellendi:", address);
+    }
+    
+    // Haritayı bu konuma odakla
+    setRegion({
+      latitude: coords.latitude,
+      longitude: coords.longitude,
+      latitudeDelta: 0.01,
+      longitudeDelta: 0.01,
+    });
+    
+    setSuggestions([]);
+    setIsSuggestingFor(null);
+    
+    // Her iki konum da seçilmişse mesafe ve süreyi hesapla
+    if (newOriginCoords && newDestinationCoords) {
+      console.log("İki konum da hazır, güncel koordinatlarla hesaplama yapılıyor");
+      // Kısa bir gecikme ile çağıralım, böylece state güncellemelerinin tamamlanması için zaman tanıyoruz
+      setTimeout(() => {
+        const distanceCalc = getPreciseDistance(
+          { latitude: newOriginCoords.latitude, longitude: newOriginCoords.longitude },
+          { latitude: newDestinationCoords.latitude, longitude: newDestinationCoords.longitude }
+        );
+        
+        // Mesafeyi kilometre cinsinden ayarla
+        const distanceInKm = distanceCalc / 1000;
+        console.log("Anlık hesaplanan mesafe:", distanceInKm, "km");
+        
+        // Mesafe değerini yuvarla
+        const roundedDistance = Math.round(distanceInKm * 10) / 10;
+        setDistance(roundedDistance);
+        
+        // Seyahat süresini hesapla (ortalama 60 km/saat hız varsayımı)
+        const estimatedDuration = Math.round(roundedDistance / 60 * 60);
+        setDuration(estimatedDuration);
+        
+        // Rota çizgisini güncelle
+        setRouteCoordinates([newOriginCoords, newDestinationCoords]);
+        
+        // Haritayı rota genişliğine göre ayarla
+        if (mapRef.current) {
+          mapRef.current.fitToCoordinates([newOriginCoords, newDestinationCoords], {
+            edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+            animated: true,
+          });
+        }
+      }, 500);
+    } else {
+      console.log("İki konum da hazır değil, hesaplama yapılmıyor");
     }
   };
 
@@ -430,6 +459,52 @@ const HomeScreen = () => {
       </View>
     </TouchableOpacity>
   );
+
+  // Yerel konumlar için sabit adres ve koordinat bilgileri
+  const locationMap = {
+    // Ana şehirler
+    'test1': { lat: 39.9334, lng: 32.8597, address: 'Ankara, Türkiye' },
+    'test2': { lat: 41.0082, lng: 28.9784, address: 'İstanbul, Türkiye' },
+    'test3': { lat: 38.4237, lng: 27.1428, address: 'İzmir, Türkiye' },
+    'test4': { lat: 36.8969, lng: 30.7133, address: 'Antalya, Türkiye' },
+    'test5': { lat: 40.1885, lng: 29.0610, address: 'Bursa, Türkiye' },
+    
+    // Ankara ilçeleri
+    'test1_1': { lat: 39.9027, lng: 32.8560, address: 'Çankaya, Ankara, Türkiye' },
+    'test1_2': { lat: 39.9750, lng: 32.8639, address: 'Keçiören, Ankara, Türkiye' },
+    'test1_3': { lat: 39.9394, lng: 32.9223, address: 'Mamak, Ankara, Türkiye' },
+    'test1_4': { lat: 39.9208, lng: 32.8541, address: 'Kızılay, Ankara, Türkiye' },
+    'test1_5': { lat: 39.9076, lng: 32.8173, address: 'Bahçelievler, Ankara, Türkiye' },
+    
+    // İstanbul ilçeleri
+    'test2_1': { lat: 40.9830, lng: 29.0291, address: 'Kadıköy, İstanbul, Türkiye' },
+    'test2_2': { lat: 41.0422, lng: 29.0093, address: 'Beşiktaş, İstanbul, Türkiye' },
+    'test2_3': { lat: 41.0284, lng: 29.0186, address: 'Üsküdar, İstanbul, Türkiye' },
+    'test2_4': { lat: 41.0369, lng: 28.9833, address: 'Beyoğlu, İstanbul, Türkiye' },
+    'test2_5': { lat: 41.0572, lng: 28.9870, address: 'Şişli, İstanbul, Türkiye' },
+    'test2_6': { lat: 41.0186, lng: 28.9400, address: 'Fatih, İstanbul, Türkiye' },
+    
+    // İzmir ilçeleri ve yerleri
+    'test3_1': { lat: 38.4192, lng: 27.1286, address: 'Konak, İzmir, Türkiye' },
+    'test3_2': { lat: 38.4595, lng: 27.1126, address: 'Karşıyaka, İzmir, Türkiye' },
+    'test3_3': { lat: 38.4681, lng: 27.2159, address: 'Bornova, İzmir, Türkiye' },
+    'test3_4': { lat: 38.3235, lng: 26.3743, address: 'Çeşme, İzmir, Türkiye' },
+    
+    // Antalya ilçeleri ve yerleri
+    'test4_1': { lat: 36.8841, lng: 30.6394, address: 'Konyaaltı, Antalya, Türkiye' },
+    'test4_2': { lat: 36.8876, lng: 30.7054, address: 'Muratpaşa, Antalya, Türkiye' },
+    'test4_3': { lat: 36.5542, lng: 31.9954, address: 'Alanya, Antalya, Türkiye' },
+    'test4_4': { lat: 36.7641, lng: 31.3893, address: 'Side, Antalya, Türkiye' },
+    
+    // Bursa ilçeleri
+    'test5_1': { lat: 40.3736, lng: 28.9017, address: 'Mudanya, Bursa, Türkiye' },
+    
+    // Önemli yerler
+    'landmark1': { lat: 39.9253, lng: 32.8351, address: 'Anıtkabir, Ankara, Türkiye' },
+    'landmark2': { lat: 41.0115, lng: 28.9833, address: 'Topkapı Sarayı, İstanbul, Türkiye' },
+    'landmark3': { lat: 41.0085, lng: 28.9799, address: 'Ayasofya, İstanbul, Türkiye' },
+    'landmark4': { lat: 38.4192, lng: 27.1286, address: 'Saat Kulesi, İzmir, Türkiye' }
+  };
 
   return (
     <View style={styles.container}>

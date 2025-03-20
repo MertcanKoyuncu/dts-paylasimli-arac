@@ -20,7 +20,7 @@ const ProfileScreen = () => {
   // Kullanıcı bilgileri (gerçek bir uygulamada API'den alınacak)
   const userInfo = {
     name: 'Mertcan Koyuncu',
-    email: 'mertcan.koyuncu@example.com',
+    email: 'info@dtsglobal.com',
     phone: '+90 555 123 45 67',
     photo: require('../../assets/profile.png'),
   };
