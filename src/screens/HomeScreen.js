@@ -34,7 +34,7 @@ const VEHICLE_TYPES = [
 ];
 
 // Google API Key - gerçek bir projede güvenlik için environment variables kullanılmalıdır
-const GOOGLE_API_KEY = 'YOUR_GOOGLE_API_KEY';
+const GOOGLE_API_KEY = 'AIzaSyBDaeWicvigtP9xPv919E-RNoxfvC-Hqik';
 
 const HomeScreen = () => {
   const [region, setRegion] = useState(INITIAL_REGION);
