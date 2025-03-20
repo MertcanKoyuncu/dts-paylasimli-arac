@@ -1,4 +1,10 @@
 # DTS Paylaşımlı Araç
+![1](https://github.com/user-attachments/assets/b0d283f1-ed44-4db5-a5b7-e7a0506df8f9)
+![2](https://github.com/user-attachments/assets/15d5fb3b-9e0b-4831-b5e0-e4ec0976d7f8)
+![3](https://github.com/user-attachments/assets/760aa22f-10ac-4a28-9dda-760e42c71a24)
+![4](https://github.com/user-attachments/assets/9ee8e25c-4693-4a8c-a71a-96a5dfebe497)
+![5](https://github.com/user-attachments/assets/f1b1d87d-e5f6-41ad-b8db-d25bcec30a03)
+![6](https://github.com/user-attachments/assets/e22c4068-f597-49dc-8aaa-1e8f2350849f)
 
 Bu uygulama, React Native ve Expo ile geliştirilen paylaşımlı araç uygulamasıdır. Uygulamada kullanıcılar konum tabanlı olarak araç çağırabilir, yolculuk detaylarını görüntüleyebilir ve profil bilgilerini yönetebilirler.
 
