@@ -107,17 +107,34 @@ const HomeScreen = () => {
     
     if (text.length > 2) {
       debounceTimer.current = setTimeout(() => {
-        // Tamamen yerel test verileri kullan
+        // Tamamen yerel test verileri kullan - Genişletilmiş liste
         const suggestions = [
           { place_id: 'test1', description: 'Ankara, Türkiye' },
           { place_id: 'test2', description: 'İstanbul, Türkiye' },
           { place_id: 'test3', description: 'İzmir, Türkiye' },
           { place_id: 'test4', description: 'Antalya, Türkiye' },
-          { place_id: 'test5', description: 'Bursa, Türkiye' }
+          { place_id: 'test5', description: 'Bursa, Türkiye' },
+          // Ankara ilçeleri
+          { place_id: 'test1_1', description: 'Çankaya, Ankara, Türkiye' },
+          { place_id: 'test1_2', description: 'Keçiören, Ankara, Türkiye' },
+          { place_id: 'test1_3', description: 'Mamak, Ankara, Türkiye' },
+          // İstanbul ilçeleri
+          { place_id: 'test2_1', description: 'Kadıköy, İstanbul, Türkiye' },
+          { place_id: 'test2_2', description: 'Beşiktaş, İstanbul, Türkiye' },
+          { place_id: 'test2_3', description: 'Üsküdar, İstanbul, Türkiye' },
+          // İzmir ilçeleri
+          { place_id: 'test3_1', description: 'Konak, İzmir, Türkiye' },
+          { place_id: 'test3_2', description: 'Karşıyaka, İzmir, Türkiye' },
+          // Antalya ilçeleri
+          { place_id: 'test4_1', description: 'Konyaaltı, Antalya, Türkiye' },
+          { place_id: 'test4_2', description: 'Muratpaşa, Antalya, Türkiye' }
         ].filter(item => 
+          // Daha esnek arama yapma
           item.description.toLowerCase().includes(text.toLowerCase())
         );
         
+        console.log("Aranan metin:", text);
+        console.log("Bulunan öneriler:", suggestions.length);
         setSuggestions(suggestions);
       }, 300);
     } else {
@@ -128,9 +145,12 @@ const HomeScreen = () => {
   // Seçilen öneriyi işle
   const handleSelectSuggestion = async (placeId) => {
     try {
+      console.log("Seçilen yer ID:", placeId);
+      
       // Test verileriyle çalış
       let lat, lng, address;
       
+      // Şehir merkezi konumları
       if (placeId === 'test1') {
         // Ankara
         lat = 39.9334;
@@ -156,6 +176,64 @@ const HomeScreen = () => {
         lat = 40.1885;
         lng = 29.0610;
         address = 'Bursa, Türkiye';
+      } 
+      // Ankara ilçeleri
+      else if (placeId === 'test1_1') {
+        // Çankaya
+        lat = 39.9027;
+        lng = 32.8560;
+        address = 'Çankaya, Ankara, Türkiye';
+      } else if (placeId === 'test1_2') {
+        // Keçiören
+        lat = 39.9750;
+        lng = 32.8639;
+        address = 'Keçiören, Ankara, Türkiye';
+      } else if (placeId === 'test1_3') {
+        // Mamak
+        lat = 39.9394;
+        lng = 32.9223;
+        address = 'Mamak, Ankara, Türkiye';
+      }
+      // İstanbul ilçeleri
+      else if (placeId === 'test2_1') {
+        // Kadıköy
+        lat = 40.9830;
+        lng = 29.0291;
+        address = 'Kadıköy, İstanbul, Türkiye';
+      } else if (placeId === 'test2_2') {
+        // Beşiktaş
+        lat = 41.0422;
+        lng = 29.0093;
+        address = 'Beşiktaş, İstanbul, Türkiye';
+      } else if (placeId === 'test2_3') {
+        // Üsküdar
+        lat = 41.0284;
+        lng = 29.0186;
+        address = 'Üsküdar, İstanbul, Türkiye';
+      }
+      // İzmir ilçeleri
+      else if (placeId === 'test3_1') {
+        // Konak
+        lat = 38.4192;
+        lng = 27.1286;
+        address = 'Konak, İzmir, Türkiye';
+      } else if (placeId === 'test3_2') {
+        // Karşıyaka
+        lat = 38.4595;
+        lng = 27.1126;
+        address = 'Karşıyaka, İzmir, Türkiye';
+      }
+      // Antalya ilçeleri
+      else if (placeId === 'test4_1') {
+        // Konyaaltı
+        lat = 36.8841;
+        lng = 30.6394;
+        address = 'Konyaaltı, Antalya, Türkiye';
+      } else if (placeId === 'test4_2') {
+        // Muratpaşa
+        lat = 36.8876;
+        lng = 30.7054;
+        address = 'Muratpaşa, Antalya, Türkiye';
       } else {
         // Varsayılan - İstanbul
         lat = 41.0082;
@@ -164,13 +242,16 @@ const HomeScreen = () => {
       }
       
       const coords = { latitude: lat, longitude: lng };
+      console.log("Seçilen konum:", address, coords);
       
       if (isSuggestingFor === 'origin') {
         setCurrentLocation(address);
         setOriginCoords(coords);
+        console.log("Origin güncellendi:", address);
       } else {
         setDestination(address);
         setDestinationCoords(coords);
+        console.log("Destination güncellendi:", address);
       }
       
       // Haritayı bu konuma odakla
@@ -185,9 +266,19 @@ const HomeScreen = () => {
       setIsSuggestingFor(null);
       
       // Her iki konum da seçilmişse mesafe ve süreyi hesapla
-      if ((isSuggestingFor === 'origin' && destinationCoords) || 
-          (isSuggestingFor === 'destination' && originCoords)) {
+      if (originCoords && destinationCoords) {
+        console.log("İki konum da hazır, hesaplama yapılıyor");
         calculateDistanceAndDuration();
+      } else if (isSuggestingFor === 'origin' && destinationCoords) {
+        console.log("Origin güncellendi ve destination zaten var, hesaplama yapılıyor");
+        // Origin seçildikten sonra, destination koordinatları varsa hesapla
+        setTimeout(() => calculateDistanceAndDuration(), 300);
+      } else if (isSuggestingFor === 'destination' && originCoords) {
+        console.log("Destination güncellendi ve origin zaten var, hesaplama yapılıyor");
+        // Destination seçildikten sonra, origin koordinatları varsa hesapla
+        setTimeout(() => calculateDistanceAndDuration(), 300);
+      } else {
+        console.log("İki konum da hazır değil, hesaplama yapılmıyor");
       }
     } catch (error) {
       console.error('Yer detayı hatası:', error);
@@ -196,18 +287,58 @@ const HomeScreen = () => {
 
   // Mesafe ve süre hesapla
   const calculateDistanceAndDuration = async () => {
-    if (!originCoords || !destinationCoords) return;
+    if (!originCoords || !destinationCoords) {
+      console.error("Eksik koordinatlar, hesaplama yapılamıyor:", { origin: originCoords, destination: destinationCoords });
+      return;
+    }
     
     setIsLoading(true);
     
     try {
-      console.log("Hesaplama başlatılıyor:", originCoords, destinationCoords);
+      console.log("Hesaplama başlatılıyor:", { origin: originCoords, destination: destinationCoords });
       
-      // Şehirleri belirleme
-      const city1 = getCity(originCoords.latitude, originCoords.longitude);
-      const city2 = getCity(destinationCoords.latitude, destinationCoords.longitude);
+      // Koordinatlardan ana şehir veya ilçe çıkarma
+      const extractLocationParts = (address) => {
+        const parts = address.split(',').map(part => part.trim());
+        // "Çankaya, Ankara, Türkiye" -> ["Çankaya", "Ankara", "Türkiye"]
+        return parts;
+      };
       
-      console.log("Şehirler:", city1, city2);
+      const getMainCity = (address) => {
+        const parts = extractLocationParts(address);
+        // İlçe, şehir formatındaysa şehri döndür
+        if (parts.length >= 2) {
+          // Ana şehirler kontrol et
+          const mainCities = ['Ankara', 'İstanbul', 'İzmir', 'Antalya', 'Bursa'];
+          for (const city of mainCities) {
+            if (parts.includes(city)) {
+              return city;
+            }
+          }
+        }
+        // Eşleşme yoksa ilk parçayı döndür
+        return parts[0];
+      };
+      
+      // Adresleri kullanarak ana şehirleri belirle
+      let city1 = null;
+      let city2 = null;
+      
+      // Origin koordinatlarına göre şehir belirleme
+      if (currentLocation) {
+        city1 = getMainCity(currentLocation);
+      } else {
+        city1 = getCity(originCoords.latitude, originCoords.longitude);
+      }
+      
+      // Destination koordinatlarına göre şehir belirleme
+      if (destination) {
+        city2 = getMainCity(destination);
+      } else {
+        city2 = getCity(destinationCoords.latitude, destinationCoords.longitude);
+      }
+      
+      console.log("Şehirler:", { origin: city1, destination: city2 });
       
       // İki şehir arası mesafe tablosu (bilinen mesafeler)
       const knownDistances = {
@@ -226,21 +357,27 @@ const HomeScreen = () => {
       let calculatedDistance = 0;
       
       // Eğer iki şehir de belirlenebilirse sabit mesafeler kullan
-      if (city1 && city2 && city1 !== city2) {
-        // Şehir isimleri alfabetik sıraya göre key oluştur
-        const key = [city1, city2].sort().join('_');
-        console.log("Aranıyor:", key);
-        
-        if (knownDistances[key]) {
-          calculatedDistance = knownDistances[key];
-          console.log("Bilinen mesafe bulundu:", calculatedDistance);
+      if (city1 && city2) {
+        if (city1 === city2) {
+          // Aynı şehir içi mesafe (yaklaşık değer)
+          calculatedDistance = 15; // Şehir içi ortalama 15 km
+          console.log("Aynı şehir içi mesafe:", calculatedDistance);
         } else {
-          // Bilinen bir mesafe yoksa Haversine formülünü kullan
-          calculatedDistance = calculateHaversineDistance(
-            originCoords.latitude, originCoords.longitude,
-            destinationCoords.latitude, destinationCoords.longitude
-          );
-          console.log("Bilinen mesafe bulunamadı, hesaplanan:", calculatedDistance);
+          // Şehir isimleri alfabetik sıraya göre key oluştur
+          const key = [city1, city2].sort().join('_');
+          console.log("Şehirler arası mesafe aranıyor:", key);
+          
+          if (knownDistances[key]) {
+            calculatedDistance = knownDistances[key];
+            console.log("Bilinen mesafe bulundu:", calculatedDistance);
+          } else {
+            // Bilinen bir mesafe yoksa Haversine formülünü kullan
+            calculatedDistance = calculateHaversineDistance(
+              originCoords.latitude, originCoords.longitude,
+              destinationCoords.latitude, destinationCoords.longitude
+            );
+            console.log("Bilinen mesafe bulunamadı, hesaplanan:", calculatedDistance);
+          }
         }
       } else {
         // Her iki şehir de belirlenemezse Haversine formülünü kullan
