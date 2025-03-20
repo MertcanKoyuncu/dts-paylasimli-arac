@@ -34,7 +34,7 @@ const VEHICLE_TYPES = [
 ];
 
 // Google API Key - gerçek bir projede güvenlik için environment variables kullanılmalıdır
-const GOOGLE_API_KEY = 'AIzaSyBDaeWicvigtP9xPv919E-RNoxfvC-Hqik';
+const GOOGLE_API_KEY = 'AIzaSyA9LYzXVYuU4PRofmRKgqVn1nzB_y3-YB4';
 
 const HomeScreen = () => {
   const [region, setRegion] = useState(INITIAL_REGION);
@@ -99,11 +99,13 @@ const HomeScreen = () => {
     setIsLoading(true);
     
     try {
+      // API çağrısı
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${originCoords.latitude},${originCoords.longitude}&destinations=${destinationCoords.latitude},${destinationCoords.longitude}&mode=driving&key=${GOOGLE_API_KEY}`
+        `https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/distancematrix/json?origins=${originCoords.latitude},${originCoords.longitude}&destinations=${destinationCoords.latitude},${destinationCoords.longitude}&mode=driving&key=${GOOGLE_API_KEY}`
       );
       const data = await response.json();
       
+      // API yanıt kontrolü
       if (data.rows && data.rows.length > 0 && data.rows[0].elements && data.rows[0].elements.length > 0) {
         const element = data.rows[0].elements[0];
         if (element.status === 'OK') {
@@ -112,24 +114,105 @@ const HomeScreen = () => {
           
           // Rota çizgisini al
           getRoutePolyline();
+        } else {
+          console.log('API yanıtı geçersiz, test verileri kullanılıyor');
+          // API yanıtı geçersizse, iki nokta arasındaki kuş uçuşu mesafeyi hesapla
+          const calculatedDistance = calculateHaversineDistance(
+            originCoords.latitude, originCoords.longitude,
+            destinationCoords.latitude, destinationCoords.longitude
+          );
+          setDistance(calculatedDistance);
+          // Ortalama hızı 60 km/s varsayarak süreyi hesapla
+          setDuration(calculatedDistance / 60 * 60);
+          
+          // Direkt çizgi rotası oluştur
+          setRouteCoordinates([originCoords, destinationCoords]);
+          
+          // Haritayı rota genişliğine göre ayarla
+          if (mapRef.current) {
+            mapRef.current.fitToCoordinates([originCoords, destinationCoords], {
+              edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+              animated: true,
+            });
+          }
+        }
+      } else {
+        console.log('API yanıtı alınamadı, test verileri kullanılıyor');
+        // Test için mesafe hesaplama
+        const calculatedDistance = calculateHaversineDistance(
+          originCoords.latitude, originCoords.longitude,
+          destinationCoords.latitude, destinationCoords.longitude
+        );
+        setDistance(calculatedDistance);
+        // Ortalama hızı 60 km/s varsayarak süreyi hesapla
+        setDuration(calculatedDistance / 60 * 60);
+        
+        // Direkt çizgi rotası oluştur
+        setRouteCoordinates([originCoords, destinationCoords]);
+        
+        // Haritayı rota genişliğine göre ayarla
+        if (mapRef.current) {
+          mapRef.current.fitToCoordinates([originCoords, destinationCoords], {
+            edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+            animated: true,
+          });
         }
       }
     } catch (error) {
       console.error('Mesafe hesaplama hatası:', error);
+      // Hata durumunda manuel hesapla
+      const calculatedDistance = calculateHaversineDistance(
+        originCoords.latitude, originCoords.longitude,
+        destinationCoords.latitude, destinationCoords.longitude
+      );
+      setDistance(calculatedDistance);
+      setDuration(calculatedDistance / 60 * 60); // Ortalama 60 km/saat hız varsayımı
+      
+      // Direkt çizgi rotası oluştur
+      setRouteCoordinates([originCoords, destinationCoords]);
+      
+      // Haritayı rotaya göre ayarla
+      if (mapRef.current) {
+        mapRef.current.fitToCoordinates([originCoords, destinationCoords], {
+          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+          animated: true,
+        });
+      }
     } finally {
       setIsLoading(false);
     }
   };
   
+  // Haversine formülü ile iki koordinat arası kuş uçuşu mesafe hesaplama (km)
+  const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
+    const R = 6371; // Dünya yarıçapı (km)
+    const dLat = toRad(lat2 - lat1);
+    const dLon = toRad(lon2 - lon1);
+    const a = 
+      Math.sin(dLat/2) * Math.sin(dLat/2) +
+      Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * 
+      Math.sin(dLon/2) * Math.sin(dLon/2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    const distance = R * c;
+    
+    // Kuş uçuşu mesafenin 1.2 katını al (kara yolu mesafesi yaklaşık)
+    return distance * 1.2;
+  };
+  
+  // Radyan dönüşümü
+  const toRad = (value) => {
+    return value * Math.PI / 180;
+  };
+
   // Rota çizgisi için koordinatları al
   const getRoutePolyline = async () => {
     try {
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/directions/json?origin=${originCoords.latitude},${originCoords.longitude}&destination=${destinationCoords.latitude},${destinationCoords.longitude}&mode=driving&key=${GOOGLE_API_KEY}`
+        `https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/directions/json?origin=${originCoords.latitude},${originCoords.longitude}&destination=${destinationCoords.latitude},${destinationCoords.longitude}&mode=driving&key=${GOOGLE_API_KEY}`
       );
       const data = await response.json();
       
-      if (data.routes && data.routes.length > 0) {
+      if (data.routes && data.routes.length > 0 && data.routes[0].overview_polyline && data.routes[0].overview_polyline.points) {
         const points = data.routes[0].overview_polyline.points;
         const decodedPoints = decodePolyline(points);
         setRouteCoordinates(decodedPoints);
@@ -141,9 +224,29 @@ const HomeScreen = () => {
             animated: true,
           });
         }
+      } else {
+        console.log('Rota verisi alınamadı, direkt çizgi kullanılıyor');
+        // Direkt çizgi kullan
+        setRouteCoordinates([originCoords, destinationCoords]);
+        
+        if (mapRef.current) {
+          mapRef.current.fitToCoordinates([originCoords, destinationCoords], {
+            edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+            animated: true,
+          });
+        }
       }
     } catch (error) {
       console.error('Rota çizgi hatası:', error);
+      // Hata durumunda direkt çizgi kullan
+      setRouteCoordinates([originCoords, destinationCoords]);
+      
+      if (mapRef.current) {
+        mapRef.current.fitToCoordinates([originCoords, destinationCoords], {
+          edgePadding: { top: 50, right: 50, bottom: 50, left: 50 },
+          animated: true,
+        });
+      }
     }
   };
   
@@ -201,16 +304,31 @@ const HomeScreen = () => {
     if (text.length > 2) {
       debounceTimer.current = setTimeout(async () => {
         try {
+          const encodedText = encodeURIComponent(text);
+          // Proxy kullanarak CORS sorununu aşma
           const response = await fetch(
-            `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${text}&key=${GOOGLE_API_KEY}&language=tr&components=country:tr`
+            `https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodedText}&key=${GOOGLE_API_KEY}&language=tr&components=country:tr`
           );
           const data = await response.json();
           
           if (data.predictions) {
             setSuggestions(data.predictions);
+          } else {
+            // Test için manuel öneriler ekle
+            setSuggestions([
+              { place_id: 'test1', description: 'Ankara, Türkiye' },
+              { place_id: 'test2', description: 'İstanbul, Türkiye' },
+              { place_id: 'test3', description: 'İzmir, Türkiye' }
+            ]);
           }
         } catch (error) {
           console.error('Yer arama hatası:', error);
+          // Hata durumunda test verileri kullan
+          setSuggestions([
+            { place_id: 'test1', description: 'Ankara, Türkiye' },
+            { place_id: 'test2', description: 'İstanbul, Türkiye' },
+            { place_id: 'test3', description: 'İzmir, Türkiye' }
+          ]);
         }
       }, 500);
     } else {
@@ -221,8 +339,60 @@ const HomeScreen = () => {
   // Seçilen öneriyi işle
   const handleSelectSuggestion = async (placeId) => {
     try {
+      // Test verileriyle çalış
+      if (placeId.startsWith('test')) {
+        let lat, lng, address;
+        
+        if (placeId === 'test1') {
+          // Ankara
+          lat = 39.9334;
+          lng = 32.8597;
+          address = 'Ankara, Türkiye';
+        } else if (placeId === 'test2') {
+          // İstanbul
+          lat = 41.0082;
+          lng = 28.9784;
+          address = 'İstanbul, Türkiye';
+        } else {
+          // İzmir
+          lat = 38.4237;
+          lng = 27.1428;
+          address = 'İzmir, Türkiye';
+        }
+        
+        const coords = { latitude: lat, longitude: lng };
+        
+        if (isSuggestingFor === 'origin') {
+          setCurrentLocation(address);
+          setOriginCoords(coords);
+        } else {
+          setDestination(address);
+          setDestinationCoords(coords);
+        }
+        
+        // Haritayı bu konuma odakla
+        setRegion({
+          latitude: lat,
+          longitude: lng,
+          latitudeDelta: 0.01,
+          longitudeDelta: 0.01,
+        });
+        
+        setSuggestions([]);
+        setIsSuggestingFor(null);
+        
+        // Her iki konum da seçilmişse mesafe ve süreyi hesapla
+        if ((isSuggestingFor === 'origin' && destinationCoords) || 
+            (isSuggestingFor === 'destination' && originCoords)) {
+          calculateDistanceAndDuration();
+        }
+        
+        return;
+      }
+      
+      // Gerçek API çağrısı
       const response = await fetch(
-        `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry,formatted_address&key=${GOOGLE_API_KEY}`
+        `https://cors-anywhere.herokuapp.com/https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=geometry,formatted_address&key=${GOOGLE_API_KEY}`
       );
       const data = await response.json();
       
