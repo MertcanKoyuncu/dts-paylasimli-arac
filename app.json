@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "taksi-uygulamasi",
-    "slug": "taksi-uygulamasi",
+    "name": "DTS Paylaşımlı Araç",
+    "slug": "dts-paylasimli-arac",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
