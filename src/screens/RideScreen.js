@@ -12,12 +12,13 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 const RideScreen = ({ route }) => {
-  const { vehicle: vehicleJson, destination } = route.params;
+  const { vehicle: vehicleJson, destination, origin, distance } = route.params;
   const vehicle = vehicleJson ? JSON.parse(vehicleJson) : null;
   
   const [status, setStatus] = useState('searching'); // searching, found, arriving, inProgress, completed
   const [driverInfo, setDriverInfo] = useState(null);
   const [timeRemaining, setTimeRemaining] = useState(0);
+  const [fare, setFare] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -35,10 +36,16 @@ const RideScreen = ({ route }) => {
         carColor: 'Beyaz',
       });
       setTimeRemaining(vehicle.eta.split(' ')[0] * 60); // dk to saniye dönüştürme
+      
+      // Km başına ücret hesaplama - baseFare + (15 TL x KM)
+      const baseFare = parseInt(vehicle.price);
+      const perKmFare = 15;
+      const totalFare = baseFare + (perKmFare * distance);
+      setFare(totalFare);
     }, 2000);
 
     return () => clearTimeout(searchTimeout);
-  }, [vehicle]);
+  }, [vehicle, distance]);
 
   useEffect(() => {
     let timer;
@@ -130,9 +137,24 @@ const RideScreen = ({ route }) => {
         </Text>
       </View>
       
-      <View style={styles.destinationContainer}>
-        <View style={styles.destinationDot} />
-        <Text style={styles.destinationText}>{destination}</Text>
+      <View style={styles.routeContainer}>
+        <View style={styles.routeItem}>
+          <View style={styles.routeDot} />
+          <Text style={styles.routeText}>{origin}</Text>
+        </View>
+        
+        <View style={styles.routeDivider} />
+        
+        <View style={styles.routeItem}>
+          <View style={[styles.routeDot, {backgroundColor: '#FF5E3A'}]} />
+          <Text style={styles.routeText}>{destination}</Text>
+        </View>
+      </View>
+      
+      <View style={styles.fareContainer}>
+        <Text style={styles.fareLabel}>Tahmini ücret:</Text>
+        <Text style={styles.fareValue}>₺{fare}</Text>
+        <Text style={styles.fareDetails}>({distance} km × ₺15/km + Baz ücret: ₺{vehicle.price})</Text>
       </View>
     </View>
   );
@@ -144,9 +166,23 @@ const RideScreen = ({ route }) => {
         <Text style={styles.progressText}>Yolculuk devam ediyor</Text>
       </View>
       
-      <View style={styles.destinationContainer}>
-        <View style={styles.destinationDot} />
-        <Text style={styles.destinationText}>{destination}</Text>
+      <View style={styles.routeContainer}>
+        <View style={styles.routeItem}>
+          <View style={styles.routeDot} />
+          <Text style={styles.routeText}>{origin}</Text>
+        </View>
+        
+        <View style={styles.routeDivider} />
+        
+        <View style={styles.routeItem}>
+          <View style={[styles.routeDot, {backgroundColor: '#FF5E3A'}]} />
+          <Text style={styles.routeText}>{destination}</Text>
+        </View>
+      </View>
+      
+      <View style={styles.fareContainer}>
+        <Text style={styles.fareLabel}>Ücret:</Text>
+        <Text style={styles.fareValue}>₺{fare}</Text>
       </View>
     </View>
   );
@@ -157,7 +193,8 @@ const RideScreen = ({ route }) => {
         <Ionicons name="checkmark-circle" size={60} color="#4CAF50" />
       </View>
       <Text style={styles.completedText}>Yolculuk Tamamlandı</Text>
-      <Text style={styles.fareText}>Ücret: {vehicle?.price}</Text>
+      <Text style={styles.fareText}>Ücret: ₺{fare}</Text>
+      <Text style={styles.distanceText}>{distance} km × ₺15/km + Baz ücret</Text>
       
       <View style={styles.ratingPrompt}>
         <Text style={styles.ratingPromptText}>Sürücünüzü değerlendirin</Text>
@@ -308,20 +345,53 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#333',
   },
-  destinationContainer: {
+  routeContainer: {
+    marginBottom: 20,
+  },
+  routeItem: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 10,
   },
-  destinationDot: {
+  routeDot: {
     width: 12,
     height: 12,
     borderRadius: 6,
-    backgroundColor: '#FF5E3A',
-    marginRight: 15,
+    backgroundColor: '#333',
+    marginRight: 10,
   },
-  destinationText: {
+  routeDivider: {
+    width: 1,
+    height: 30,
+    backgroundColor: '#ccc',
+    marginLeft: 5.5,
+    marginBottom: 10,
+  },
+  routeText: {
     fontSize: 16,
     color: '#333',
+  },
+  fareContainer: {
+    alignItems: 'center',
+    marginTop: 10,
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 15,
+  },
+  fareLabel: {
+    fontSize: 14,
+    color: '#666',
+    marginBottom: 5,
+  },
+  fareValue: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 5,
+  },
+  fareDetails: {
+    fontSize: 12,
+    color: '#666',
   },
   inProgressContainer: {
     padding: 20,
@@ -358,8 +428,14 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   fareText: {
-    fontSize: 18,
+    fontSize: 22,
+    fontWeight: 'bold',
     color: '#333',
+    marginBottom: 5,
+  },
+  distanceText: {
+    fontSize: 14,
+    color: '#666',
     marginBottom: 30,
   },
   ratingPrompt: {

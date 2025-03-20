@@ -26,17 +26,33 @@ const INITIAL_REGION = {
 };
 
 const VEHICLE_TYPES = [
-  { id: '1', name: 'Ekonomik', price: '₺20', image: require('../../assets/economy-car.png'), eta: '3 dk' },
-  { id: '2', name: 'Konfor', price: '₺30', image: require('../../assets/comfort-car.png'), eta: '5 dk' },
-  { id: '3', name: 'Premium', price: '₺50', image: require('../../assets/premium-car.png'), eta: '8 dk' },
+  { id: '1', name: 'Ekonomik', price: '15', image: require('../../assets/economy-car.png'), eta: '3 dk' },
+  { id: '2', name: 'Konfor', price: '20', image: require('../../assets/comfort-car.png'), eta: '5 dk' },
+  { id: '3', name: 'Premium', price: '25', image: require('../../assets/premium-car.png'), eta: '8 dk' },
 ];
+
+// Mesafe simülasyonu (KM cinsinden)
+const DISTANCE_SIMULATION = {
+  'Kadıköy': 5,
+  'Üsküdar': 7,
+  'Beşiktaş': 8,
+  'Beyoğlu': 10,
+  'Şişli': 12,
+  'Ataşehir': 15,
+  'Maltepe': 18,
+  'Kartal': 22,
+  'Pendik': 25,
+  'Tuzla': 30
+};
 
 const HomeScreen = () => {
   const [region, setRegion] = useState(INITIAL_REGION);
   const [location, setLocation] = useState(null);
+  const [currentLocation, setCurrentLocation] = useState('Mevcut Konum');
   const [destination, setDestination] = useState('');
   const [bookingModalVisible, setBookingModalVisible] = useState(false);
   const [selectedVehicle, setSelectedVehicle] = useState(VEHICLE_TYPES[0]);
+  const [distance, setDistance] = useState(0);
   const router = useRouter();
 
   useEffect(() => {
@@ -60,14 +76,37 @@ const HomeScreen = () => {
     })();
   }, []);
 
+  // Hedef değiştiğinde mesafeyi güncelle
+  useEffect(() => {
+    if (destination) {
+      // Gerçek uygulamada Google Distance Matrix API gibi bir servis kullanılabilir
+      // Biz şimdilik basit bir simülasyon kullanıyoruz
+      const distanceKm = DISTANCE_SIMULATION[destination] || Math.floor(Math.random() * 20) + 5;
+      setDistance(distanceKm);
+    }
+  }, [destination]);
+
   const handleBookVehicle = () => {
     // Araç çağırma işlemleri burada yapılacak
     setBookingModalVisible(false);
+    
+    // Km başına ücret hesaplama (15 TL/km)
+    const farePerKm = 15;
+    const baseFare = parseInt(selectedVehicle.price);
+    const totalFare = baseFare + (distance * farePerKm);
+    
+    const vehicleData = {
+      ...selectedVehicle,
+      calculatedPrice: `₺${totalFare}`
+    };
+    
     router.push({
       pathname: '/ride',
       params: { 
-        vehicle: JSON.stringify(selectedVehicle), 
-        destination 
+        vehicle: JSON.stringify(vehicleData),
+        destination,
+        origin: currentLocation,
+        distance
       }
     });
   };
@@ -85,7 +124,7 @@ const HomeScreen = () => {
         <Text style={styles.vehicleName}>{item.name}</Text>
         <Text style={styles.vehicleEta}>{item.eta}</Text>
       </View>
-      <Text style={styles.vehiclePrice}>{item.price}</Text>
+      <Text style={styles.vehiclePrice}>₺{item.price} + (15 × {distance} km)</Text>
     </TouchableOpacity>
   );
 
@@ -128,10 +167,16 @@ const HomeScreen = () => {
         <View style={styles.searchContainer}>
           <View style={styles.currentLocationContainer}>
             <Ionicons name="location" size={24} color="#FF5E3A" />
-            <Text style={styles.currentLocationText}>Mevcut Konum</Text>
+            <TextInput
+              style={styles.currentLocationInput}
+              value={currentLocation}
+              onChangeText={setCurrentLocation}
+              placeholder="Nereden?"
+            />
           </View>
           
           <View style={styles.destinationContainer}>
+            <Ionicons name="navigate" size={24} color="#333" />
             <TextInput
               style={styles.destinationInput}
               placeholder="Nereye?"
@@ -142,9 +187,9 @@ const HomeScreen = () => {
         </View>
         
         <TouchableOpacity 
-          style={styles.bookButton}
+          style={[styles.bookButton, (!destination || !currentLocation) && styles.bookButtonDisabled]}
           onPress={() => setBookingModalVisible(true)}
-          disabled={!destination}
+          disabled={!destination || !currentLocation}
         >
           <Text style={styles.bookButtonText}>ARAÇ ÇAĞIR</Text>
         </TouchableOpacity>
@@ -245,10 +290,11 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: '#eee',
   },
-  currentLocationText: {
-    marginLeft: 10,
+  currentLocationInput: {
+    flex: 1,
     fontSize: 16,
     color: '#333',
+    marginLeft: 10,
   },
   destinationContainer: {
     flexDirection: 'row',
@@ -259,12 +305,16 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 16,
     color: '#333',
+    marginLeft: 10,
   },
   bookButton: {
     backgroundColor: '#FF5E3A',
     borderRadius: 8,
     padding: 15,
     alignItems: 'center',
+  },
+  bookButtonDisabled: {
+    backgroundColor: '#ccc',
   },
   bookButtonText: {
     color: '#fff',
