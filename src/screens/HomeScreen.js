@@ -17,6 +17,7 @@ import MapView, { Marker, Polyline } from 'react-native-maps';
 import * as Location from 'expo-location';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import { getDistance, getPreciseDistance } from 'geolib';
 
 const { width, height } = Dimensions.get('window');
 
@@ -297,108 +298,28 @@ const HomeScreen = () => {
     try {
       console.log("Hesaplama başlatılıyor:", { origin: originCoords, destination: destinationCoords });
       
-      // Koordinatlardan ana şehir veya ilçe çıkarma
-      const extractLocationParts = (address) => {
-        const parts = address.split(',').map(part => part.trim());
-        // "Çankaya, Ankara, Türkiye" -> ["Çankaya", "Ankara", "Türkiye"]
-        return parts;
-      };
+      // Geolib ile mesafe hesapla (metre cinsinden)
+      const distance = getPreciseDistance(
+        { latitude: originCoords.latitude, longitude: originCoords.longitude },
+        { latitude: destinationCoords.latitude, longitude: destinationCoords.longitude }
+      );
       
-      const getMainCity = (address) => {
-        const parts = extractLocationParts(address);
-        // İlçe, şehir formatındaysa şehri döndür
-        if (parts.length >= 2) {
-          // Ana şehirler kontrol et
-          const mainCities = ['Ankara', 'İstanbul', 'İzmir', 'Antalya', 'Bursa'];
-          for (const city of mainCities) {
-            if (parts.includes(city)) {
-              return city;
-            }
-          }
-        }
-        // Eşleşme yoksa ilk parçayı döndür
-        return parts[0];
-      };
+      // Mesafeyi kilometre cinsinden ayarla
+      const distanceInKm = distance / 1000;
+      console.log("Geolib ile hesaplanan mesafe:", distanceInKm, "km");
       
-      // Adresleri kullanarak ana şehirleri belirle
-      let city1 = null;
-      let city2 = null;
-      
-      // Origin koordinatlarına göre şehir belirleme
-      if (currentLocation) {
-        city1 = getMainCity(currentLocation);
-      } else {
-        city1 = getCity(originCoords.latitude, originCoords.longitude);
-      }
-      
-      // Destination koordinatlarına göre şehir belirleme
-      if (destination) {
-        city2 = getMainCity(destination);
-      } else {
-        city2 = getCity(destinationCoords.latitude, destinationCoords.longitude);
-      }
-      
-      console.log("Şehirler:", { origin: city1, destination: city2 });
-      
-      // İki şehir arası mesafe tablosu (bilinen mesafeler)
-      const knownDistances = {
-        'Ankara_İstanbul': 450,
-        'Ankara_İzmir': 600,
-        'Ankara_Antalya': 500,
-        'Ankara_Bursa': 380,
-        'İstanbul_İzmir': 480,
-        'İstanbul_Antalya': 700,
-        'İstanbul_Bursa': 150,
-        'İzmir_Antalya': 320,
-        'İzmir_Bursa': 330,
-        'Antalya_Bursa': 550
-      };
-      
-      let calculatedDistance = 0;
-      
-      // Eğer iki şehir de belirlenebilirse sabit mesafeler kullan
-      if (city1 && city2) {
-        if (city1 === city2) {
-          // Aynı şehir içi mesafe (yaklaşık değer)
-          calculatedDistance = 15; // Şehir içi ortalama 15 km
-          console.log("Aynı şehir içi mesafe:", calculatedDistance);
-        } else {
-          // Şehir isimleri alfabetik sıraya göre key oluştur
-          const key = [city1, city2].sort().join('_');
-          console.log("Şehirler arası mesafe aranıyor:", key);
-          
-          if (knownDistances[key]) {
-            calculatedDistance = knownDistances[key];
-            console.log("Bilinen mesafe bulundu:", calculatedDistance);
-          } else {
-            // Bilinen bir mesafe yoksa Haversine formülünü kullan
-            calculatedDistance = calculateHaversineDistance(
-              originCoords.latitude, originCoords.longitude,
-              destinationCoords.latitude, destinationCoords.longitude
-            );
-            console.log("Bilinen mesafe bulunamadı, hesaplanan:", calculatedDistance);
-          }
-        }
-      } else {
-        // Her iki şehir de belirlenemezse Haversine formülünü kullan
-        calculatedDistance = calculateHaversineDistance(
-          originCoords.latitude, originCoords.longitude,
-          destinationCoords.latitude, destinationCoords.longitude
-        );
-        console.log("Şehirler belirlenemedi, hesaplanan:", calculatedDistance);
-      }
-      
-      // Mesafeyi km cinsinden ayarla
-      setDistance(calculatedDistance);
-      console.log("Mesafe ayarlandı:", calculatedDistance);
+      // Mesafe değerini yuvarla
+      const roundedDistance = Math.round(distanceInKm * 10) / 10;
+      setDistance(roundedDistance);
       
       // Seyahat süresini hesapla (ortalama 60 km/saat hız varsayımı)
-      const estimatedDuration = calculatedDistance / 60 * 60;
+      const estimatedDuration = Math.round(roundedDistance / 60 * 60);
       setDuration(estimatedDuration);
-      console.log("Süre ayarlandı:", estimatedDuration);
+      console.log("Hesaplanan süre:", estimatedDuration, "dakika");
       
       // Rota çizgisi oluştur
       createDirectRoute();
+      
     } catch (error) {
       console.error('Mesafe hesaplama hatası:', error);
     } finally {
