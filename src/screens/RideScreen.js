@@ -6,7 +6,8 @@ import {
   TouchableOpacity, 
   Image,
   SafeAreaView,
-  ActivityIndicator
+  ActivityIndicator,
+  Linking
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
@@ -34,13 +35,14 @@ const RideScreen = ({ route }) => {
         numberPlate: '34 ABC 123',
         car: 'Toyota Corolla',
         carColor: 'Beyaz',
+        phone: '+905551234567'
       });
       setTimeRemaining(vehicle.eta.split(' ')[0] * 60); // dk to saniye dönüştürme
       
-      // Km başına ücret hesaplama - baseFare + (15 TL x KM)
+      // Gerçek mesafe bilgisini kullan - baseFare + (15 TL x KM)
       const baseFare = parseInt(vehicle.price);
       const perKmFare = 15;
-      const totalFare = baseFare + (perKmFare * distance);
+      const totalFare = baseFare + (parseFloat(distance) * perKmFare);
       setFare(totalFare);
     }, 2000);
 
@@ -71,6 +73,12 @@ const RideScreen = ({ route }) => {
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = seconds % 60;
     return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
+  };
+  
+  const handleCallDriver = () => {
+    if (driverInfo && driverInfo.phone) {
+      Linking.openURL(`tel:${driverInfo.phone}`);
+    }
   };
 
   const renderHeader = () => (
@@ -106,7 +114,7 @@ const RideScreen = ({ route }) => {
             <Text style={styles.ratingText}>{driverInfo.rating}</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.callButton}>
+        <TouchableOpacity style={styles.callButton} onPress={handleCallDriver}>
           <Ionicons name="call" size={20} color="#fff" />
         </TouchableOpacity>
       </View>
@@ -140,20 +148,20 @@ const RideScreen = ({ route }) => {
       <View style={styles.routeContainer}>
         <View style={styles.routeItem}>
           <View style={styles.routeDot} />
-          <Text style={styles.routeText}>{origin}</Text>
+          <Text style={styles.routeText} numberOfLines={2}>{origin}</Text>
         </View>
         
         <View style={styles.routeDivider} />
         
         <View style={styles.routeItem}>
           <View style={[styles.routeDot, {backgroundColor: '#FF5E3A'}]} />
-          <Text style={styles.routeText}>{destination}</Text>
+          <Text style={styles.routeText} numberOfLines={2}>{destination}</Text>
         </View>
       </View>
       
       <View style={styles.fareContainer}>
         <Text style={styles.fareLabel}>Tahmini ücret:</Text>
-        <Text style={styles.fareValue}>₺{fare}</Text>
+        <Text style={styles.fareValue}>₺{fare.toFixed(0)}</Text>
         <Text style={styles.fareDetails}>({distance} km × ₺15/km + Baz ücret: ₺{vehicle.price})</Text>
       </View>
     </View>
@@ -169,20 +177,20 @@ const RideScreen = ({ route }) => {
       <View style={styles.routeContainer}>
         <View style={styles.routeItem}>
           <View style={styles.routeDot} />
-          <Text style={styles.routeText}>{origin}</Text>
+          <Text style={styles.routeText} numberOfLines={2}>{origin}</Text>
         </View>
         
         <View style={styles.routeDivider} />
         
         <View style={styles.routeItem}>
           <View style={[styles.routeDot, {backgroundColor: '#FF5E3A'}]} />
-          <Text style={styles.routeText}>{destination}</Text>
+          <Text style={styles.routeText} numberOfLines={2}>{destination}</Text>
         </View>
       </View>
       
       <View style={styles.fareContainer}>
         <Text style={styles.fareLabel}>Ücret:</Text>
-        <Text style={styles.fareValue}>₺{fare}</Text>
+        <Text style={styles.fareValue}>₺{fare.toFixed(0)}</Text>
       </View>
     </View>
   );
@@ -193,7 +201,7 @@ const RideScreen = ({ route }) => {
         <Ionicons name="checkmark-circle" size={60} color="#4CAF50" />
       </View>
       <Text style={styles.completedText}>Yolculuk Tamamlandı</Text>
-      <Text style={styles.fareText}>Ücret: ₺{fare}</Text>
+      <Text style={styles.fareText}>Ücret: ₺{fare.toFixed(0)}</Text>
       <Text style={styles.distanceText}>{distance} km × ₺15/km + Baz ücret</Text>
       
       <View style={styles.ratingPrompt}>
@@ -370,6 +378,8 @@ const styles = StyleSheet.create({
   routeText: {
     fontSize: 16,
     color: '#333',
+    flex: 1,
+    flexWrap: 'wrap'
   },
   fareContainer: {
     alignItems: 'center',
