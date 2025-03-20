@@ -201,18 +201,64 @@ const HomeScreen = () => {
     setIsLoading(true);
     
     try {
-      // Mesafeyi Haversine formülü ile hesapla
-      const calculatedDistance = calculateHaversineDistance(
-        originCoords.latitude, originCoords.longitude,
-        destinationCoords.latitude, destinationCoords.longitude
-      );
+      console.log("Hesaplama başlatılıyor:", originCoords, destinationCoords);
+      
+      // Şehirleri belirleme
+      const city1 = getCity(originCoords.latitude, originCoords.longitude);
+      const city2 = getCity(destinationCoords.latitude, destinationCoords.longitude);
+      
+      console.log("Şehirler:", city1, city2);
+      
+      // İki şehir arası mesafe tablosu (bilinen mesafeler)
+      const knownDistances = {
+        'Ankara_İstanbul': 450,
+        'Ankara_İzmir': 600,
+        'Ankara_Antalya': 500,
+        'Ankara_Bursa': 380,
+        'İstanbul_İzmir': 480,
+        'İstanbul_Antalya': 700,
+        'İstanbul_Bursa': 150,
+        'İzmir_Antalya': 320,
+        'İzmir_Bursa': 330,
+        'Antalya_Bursa': 550
+      };
+      
+      let calculatedDistance = 0;
+      
+      // Eğer iki şehir de belirlenebilirse sabit mesafeler kullan
+      if (city1 && city2 && city1 !== city2) {
+        // Şehir isimleri alfabetik sıraya göre key oluştur
+        const key = [city1, city2].sort().join('_');
+        console.log("Aranıyor:", key);
+        
+        if (knownDistances[key]) {
+          calculatedDistance = knownDistances[key];
+          console.log("Bilinen mesafe bulundu:", calculatedDistance);
+        } else {
+          // Bilinen bir mesafe yoksa Haversine formülünü kullan
+          calculatedDistance = calculateHaversineDistance(
+            originCoords.latitude, originCoords.longitude,
+            destinationCoords.latitude, destinationCoords.longitude
+          );
+          console.log("Bilinen mesafe bulunamadı, hesaplanan:", calculatedDistance);
+        }
+      } else {
+        // Her iki şehir de belirlenemezse Haversine formülünü kullan
+        calculatedDistance = calculateHaversineDistance(
+          originCoords.latitude, originCoords.longitude,
+          destinationCoords.latitude, destinationCoords.longitude
+        );
+        console.log("Şehirler belirlenemedi, hesaplanan:", calculatedDistance);
+      }
       
       // Mesafeyi km cinsinden ayarla
       setDistance(calculatedDistance);
+      console.log("Mesafe ayarlandı:", calculatedDistance);
       
-      // Seyahat süresini hesapla (60 km/s ortalama hız varsayımı)
+      // Seyahat süresini hesapla (ortalama 60 km/saat hız varsayımı)
       const estimatedDuration = calculatedDistance / 60 * 60;
       setDuration(estimatedDuration);
+      console.log("Süre ayarlandı:", estimatedDuration);
       
       // Rota çizgisi oluştur
       createDirectRoute();
@@ -239,6 +285,28 @@ const HomeScreen = () => {
     }
   };
   
+  // Koordinatlara göre şehir belirleme - hassasiyeti artırıldı
+  const getCity = (lat, lon) => {
+    const cities = {
+      'Ankara': [39.9334, 32.8597],
+      'İstanbul': [41.0082, 28.9784],
+      'İzmir': [38.4237, 27.1428],
+      'Antalya': [36.8969, 30.7133],
+      'Bursa': [40.1885, 29.0610]
+    };
+    
+    // Daha geniş bir tolerans değeri kullan (0.5 derece)
+    const tolerance = 0.5;
+    
+    for (const [city, coords] of Object.entries(cities)) {
+      if (Math.abs(lat - coords[0]) < tolerance && Math.abs(lon - coords[1]) < tolerance) {
+        return city;
+      }
+    }
+    console.log("Şehir bulunamadı:", lat, lon);
+    return null;
+  };
+  
   // Haversine formülü ile iki koordinat arası mesafe hesaplama (km)
   const calculateHaversineDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371; // Dünya yarıçapı (km)
@@ -251,51 +319,8 @@ const HomeScreen = () => {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
     const distance = R * c;
     
-    // İki şehir arası mesafe tablosu (bilinen mesafeler)
-    const knownDistances = {
-      'Ankara_İstanbul': 450,
-      'Ankara_İzmir': 600,
-      'Ankara_Antalya': 500,
-      'Ankara_Bursa': 380,
-      'İstanbul_İzmir': 480,
-      'İstanbul_Antalya': 700,
-      'İstanbul_Bursa': 150,
-      'İzmir_Antalya': 320,
-      'İzmir_Bursa': 330,
-      'Antalya_Bursa': 550
-    };
-    
-    // Şehirleri belirleme
-    const city1 = getCity(lat1, lon1);
-    const city2 = getCity(lat2, lon2);
-    
-    if (city1 && city2 && city1 !== city2) {
-      const key = [city1, city2].sort().join('_');
-      if (knownDistances[key]) {
-        return knownDistances[key];
-      }
-    }
-    
     // Kuş uçuşu mesafenin 1.5 katını al (kara yolu mesafesi yaklaşık)
-    return Math.max(distance * 1.5, 10); // En az 10 km
-  };
-  
-  // Koordinatlara göre şehir belirleme
-  const getCity = (lat, lon) => {
-    const cities = {
-      'Ankara': [39.9334, 32.8597],
-      'İstanbul': [41.0082, 28.9784],
-      'İzmir': [38.4237, 27.1428],
-      'Antalya': [36.8969, 30.7133],
-      'Bursa': [40.1885, 29.0610]
-    };
-    
-    for (const [city, coords] of Object.entries(cities)) {
-      if (Math.abs(lat - coords[0]) < 0.1 && Math.abs(lon - coords[1]) < 0.1) {
-        return city;
-      }
-    }
-    return null;
+    return Math.max(Math.round(distance * 1.5), 10); // En az 10 km, yuvarlanmış değer
   };
   
   // Radyan dönüşümü
